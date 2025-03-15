@@ -1,1 +1,1 @@
-https://ecommerce-ganipedia.streamlit.app
+https://ecommerce-ganipedia.streamlit.app/
