@@ -10,7 +10,6 @@ Ecommerce_Data_Analysis/
 │   │── dashboard.py
 │── data/
 │   │── customers.csv
-│   │── orders.csv
 │   │── products.csv
 │── notebook.ipynb
 │── README.md

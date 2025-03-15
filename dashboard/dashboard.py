@@ -9,101 +9,86 @@ st.set_page_config(page_title="E-Commerce Data Analytics Dashboard", layout="wid
 # =============== LOAD DATA ===============
 df_customers = pd.read_csv("data/customers_dataset.csv")  # Customer dataset
 df_products = pd.read_csv("data/products_dataset.csv")    # Product dataset
-df_orders = pd.read_csv("data/orders_dataset.csv")        # Orders dataset
+
+# Perbaiki nama kolom jika ada typo
+if "product_name_lenght" in df_products.columns:
+    df_products.rename(columns={"product_name_lenght": "product_name_length"}, inplace=True)
 
 # =============== HEADER ===============
 st.markdown("<h1 style='text-align: center; color: #1E88E5;'>E-Commerce Data Analytics Dashboard</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
 # =============== SIDEBAR MENU ===============
-menu = st.sidebar.radio("Select Analysis", ["Product Analysis", "Customer Analysis", "Sales Performance"])
+menu = st.sidebar.radio("Select Analysis", ["Product Analysis", "Customer Analysis"])
 
 # =============== PRODUCT ANALYSIS ===============
 if menu == "Product Analysis":
     st.markdown("## Product Analysis")
     
-    product_analysis = st.radio("Choose product analysis:", 
-                                ["Top-Selling Product Categories", "Average Product Description Length per Category"],
-                                horizontal=True)
+    # Filter berdasarkan kategori produk
+    if "product_category_name" in df_products.columns:
+        product_category = st.sidebar.selectbox("Select Product Category", df_products["product_category_name"].unique())
+        filtered_df_products = df_products[df_products["product_category_name"] == product_category]
 
-    if product_analysis == "Top-Selling Product Categories":
-        st.subheader("Top 10 Best-Selling Product Categories")
-        top_categories = df_products["product_category_name"].value_counts().head(10)
-
-        fig, ax = plt.subplots(figsize=(10,5))
-        sns.barplot(y=top_categories.index, x=top_categories.values, ax=ax, hue=top_categories.index, palette="viridis", legend=False)
-        ax.set_xlabel("Number of Products Sold")
-        ax.set_ylabel("Product Category")
-        ax.set_title("Top 10 Best-Selling Product Categories")
+        # 1. Distribusi berat dan dimensi produk berdasarkan kategori
+        st.subheader("Distribusi Berat dan Dimensi Produk")
+        
+        fig, axes = plt.subplots(1, 3, figsize=(18,5))
+        sns.histplot(filtered_df_products["product_weight_g"], bins=20, kde=True, ax=axes[0], color='blue')
+        axes[0].set_title("Distribusi Berat Produk (gram)")
+        
+        sns.histplot(filtered_df_products["product_length_cm"], bins=20, kde=True, ax=axes[1], color='green')
+        axes[1].set_title("Distribusi Panjang Produk (cm)")
+        
+        sns.histplot(filtered_df_products["product_height_cm"], bins=20, kde=True, ax=axes[2], color='red')
+        axes[2].set_title("Distribusi Tinggi Produk (cm)")
+        
         st.pyplot(fig)
 
-    elif product_analysis == "Average Product Description Length per Category":
-        st.subheader("Average Product Description Length per Category")
-        if "product_description_length" in df_products.columns:
-            avg_desc_length = df_products.groupby("product_category_name")["product_description_length"].mean().sort_values(ascending=False).head(10)
-
-            fig, ax = plt.subplots(figsize=(10,5))
-            sns.barplot(y=avg_desc_length.index, x=avg_desc_length.values, ax=ax, hue=avg_desc_length.index, palette="coolwarm", legend=False)
-            ax.set_xlabel("Average Description Length")
-            ax.set_ylabel("Product Category")
-            ax.set_title("Top 10 Categories with the Longest Descriptions")
-            st.pyplot(fig)
-        else:
-            st.warning("The column 'product_description_length' was not found in the dataset.")
+        # 2. Hubungan antara jumlah foto, panjang deskripsi, dan panjang nama terhadap dimensi produk
+        st.subheader("Pengaruh Nama Produk, Deskripsi, dan Jumlah Foto terhadap Dimensi Produk")
+        
+        fig, ax = plt.subplots(figsize=(10,5))
+        sns.scatterplot(x="product_name_length", y="product_length_cm", data=filtered_df_products, color="blue", label="Nama Produk vs Panjang Produk")
+        sns.scatterplot(x="product_description_length", y="product_length_cm", data=filtered_df_products, color="green", label="Deskripsi vs Panjang Produk")
+        sns.scatterplot(x="product_photos_qty", y="product_length_cm", data=filtered_df_products, color="red", label="Jumlah Foto vs Panjang Produk")
+        ax.set_xlabel("Panjang Nama / Deskripsi / Jumlah Foto")
+        ax.set_ylabel("Panjang Produk (cm)")
+        ax.set_title("Hubungan Faktor-Faktor Terhadap Panjang Produk")
+        ax.legend()
+        st.pyplot(fig)
 
 # =============== CUSTOMER ANALYSIS ===============
 elif menu == "Customer Analysis":
     st.markdown("## Customer Analysis")
-
-    customer_analysis = st.radio("Choose customer analysis:", 
-                                 ["Top 10 Cities with Most Customers", "Customer Zip Code Distribution"],
-                                 horizontal=True)
-
-    if customer_analysis == "Top 10 Cities with Most Customers":
-        st.subheader("Top 10 Cities with the Most Customers")
-        top_cities = df_customers["customer_city"].value_counts().head(10)
-
-        fig, ax = plt.subplots(figsize=(10,5))
-        sns.barplot(y=top_cities.index, x=top_cities.values, ax=ax, hue=top_cities.index, color="skyblue", legend=False)
-        ax.set_xlabel("Number of Customers")
-        ax.set_ylabel("City")
-        ax.set_title("Top 10 Cities with the Most Customers")
-        st.pyplot(fig)
-
-    elif customer_analysis == "Customer Zip Code Distribution":
-        st.subheader("Customer Zip Code Distribution")
-
-        fig, ax = plt.subplots(figsize=(10,5))
-        sns.histplot(df_customers["customer_zip_code_prefix"], bins=30, kde=True, color="purple")
-        ax.set_xlabel("Customer Zip Code")
-        ax.set_ylabel("Count")
-        ax.set_title("Customer Zip Code Distribution")
-        st.pyplot(fig)
-
-# =============== SALES PERFORMANCE ===============
-elif menu == "Sales Performance":
-    st.markdown("## Sales Performance Analysis")
     
-    st.subheader("Cities with the Highest Product Sales")
-
-    if all(col in df_orders.columns for col in ["customer_id", "order_status"]) and "customer_city" in df_customers.columns:
-        # Merge orders with customers to get city information
-        merged_df = df_orders.merge(df_customers, on="customer_id")
-
-        # Filter only delivered or shipped orders
-        completed_orders = merged_df[merged_df["order_status"].isin(["delivered", "shipped"])]
-
-        # Count number of orders per city
-        city_sales = completed_orders["customer_city"].value_counts().head(10)
-
+    # 3. Distribusi pelanggan berdasarkan lokasi dan dampaknya pada permintaan produk
+    if "customer_city" in df_customers.columns:
+        st.subheader("Distribusi Pelanggan berdasarkan Lokasi")
+        
+        city_counts = df_customers["customer_city"].value_counts().head(10)
+        
         fig, ax = plt.subplots(figsize=(10,5))
-        sns.barplot(y=city_sales.index, x=city_sales.values, ax=ax, hue=city_sales.index, color="orange", legend=False)
-        ax.set_xlabel("Number of Purchases")
-        ax.set_ylabel("City")
-        ax.set_title("Cities with the Highest Product Sales")
+        sns.barplot(y=city_counts.index, x=city_counts.values, ax=ax, color="skyblue")
+        ax.set_xlabel("Jumlah Pelanggan")
+        ax.set_ylabel("Kota")
+        ax.set_title("Top 10 Kota dengan Pelanggan Terbanyak")
         st.pyplot(fig)
+        
+        # Dampak lokasi terhadap permintaan produk
+        st.subheader("Dampak Lokasi terhadap Permintaan Produk")
+        
+        if "customer_city" in df_customers.columns and "customer_id" in df_customers.columns:
+            customer_orders = df_customers.groupby("customer_city")["customer_id"].count().sort_values(ascending=False).head(10)
+            
+            fig, ax = plt.subplots(figsize=(10,5))
+            sns.barplot(y=customer_orders.index, x=customer_orders.values, ax=ax, color="orange")
+            ax.set_xlabel("Jumlah Pesanan")
+            ax.set_ylabel("Kota")
+            ax.set_title("Top 10 Kota dengan Permintaan Produk Terbanyak")
+            st.pyplot(fig)
     else:
-        st.warning("Required columns were not found in the orders or customers dataset.")
+        st.warning("Kolom 'customer_city' tidak ditemukan di dataset pelanggan.")
 
 # =============== FOOTER ===============
 st.markdown("---")
