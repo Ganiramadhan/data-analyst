@@ -9,11 +9,12 @@ Ecommerce_Data_Analysis/
 │── dashboard/
 │   │── dashboard.py
 │── data/
-│   │── customers.csv
-│   │── products.csv
+│   │── customers_dataset.csv
+│   │── products_dataset.csv
 │── notebook.ipynb
 │── README.md
 │── requirements.txt
+│── url.txt
 ```
 
 ## 🚀 How to Run
